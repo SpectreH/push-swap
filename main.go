@@ -9,10 +9,8 @@ import (
 
 func main() {
 	if len(os.Args) == 1 {
-		fmt.Println()
 		os.Exit(0)
 	}
-
 	if len(os.Args) != 2 {
 		fmt.Println("Error")
 		return
@@ -21,27 +19,39 @@ func main() {
 	userInput := strings.Split(os.Args[1], " ")
 	var aStack []int
 	var bStack []int
-	// Append all number to A stack
+
+	err := AppendNumbers(userInput, &aStack)
+	if err {
+		return
+	}
+
+	_ = bStack
+
+	fmt.Println(aStack)
+}
+
+// Append all number to A stack
+func AppendNumbers(userInput []string, aStack *[]int) bool {
 	for i := 0; i < len(userInput); i++ {
 		numToAppend, err := strconv.Atoi(userInput[i])
 		if err != nil {
 			fmt.Println("Error")
-			return
+			return true
 		}
 
 		// Check for duplicates
 		if i != 0 {
-			for k := 0; k < len(aStack); k++ {
-				if aStack[k] == numToAppend {
+			for k := 0; k < len(*aStack); k++ {
+				if (*aStack)[k] == numToAppend {
 					fmt.Println("Error")
-					return
+					return true
 				}
 			}
 		}
 
-		aStack = append(aStack, numToAppend)
+		(*aStack) = append((*aStack), numToAppend)
 	}
-	_ = bStack
+	return false
 }
 
 // Pushes the top first element of one stack to another (pa, pb)
