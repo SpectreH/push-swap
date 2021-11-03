@@ -1,8 +1,14 @@
 #!/bin/bash
+if test "$#" -ne 1; then
+    echo "Illegal number of parameters"
+    exit 0
+fi
 
+argument=$1;
+declare -i counter=$argument
 numbers=""
 numbersArr=()
-for i in {1..5}; do
+for ((i=1;i<=$1;i++)); do
   declare -i numberToAppend="$((RANDOM % 100))"
   repeats=no
   while [[ "$repeats" = "no" ]] 
@@ -17,7 +23,7 @@ for i in {1..5}; do
   done
   numbers+="$numberToAppend"
   numbersArr+=("$numberToAppend")
-  if [ "$i" != 5 ]; then
+  if [ "$i" != "$counter" ]; then
   numbers+=" " 
   fi
 done
