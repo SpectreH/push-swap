@@ -28,4 +28,4 @@ for ((i=1;i<=$1;i++)); do
   fi
 done
 
-go run . "$numbers"
+./push_swap "$numbers"
