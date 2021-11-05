@@ -9,7 +9,7 @@ declare -i counter=$argument
 numbers=""
 numbersArr=()
 for ((i=1;i<=$1;i++)); do
-  declare -i numberToAppend="$((RANDOM % 100))"
+  declare -i numberToAppend="$((RANDOM % 1000))"
   repeats=no
   while [[ "$repeats" = "no" ]] 
   do
@@ -28,4 +28,5 @@ for ((i=1;i<=$1;i++)); do
   fi
 done
 
-./push_swap "$numbers"
+echo $numbers
+./push-swap "$numbers"

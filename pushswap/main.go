@@ -9,6 +9,13 @@ import (
 	"strings"
 )
 
+type ScoreData struct {
+	StepsCounterInA  int
+	StepsCounterInB  int
+	TypeMoveInStackA string
+	TypeMoveInStackB string
+}
+
 func main() {
 	if len(os.Args) == 1 {
 		os.Exit(0)
@@ -51,11 +58,10 @@ func main() {
 		return
 	}
 
-	if len(aStack) <= 6 {
-		min, max, _, _ := FindValues(&aStack)
+	min, max, stackSize, median := FindValues(&aStack)
 
-		aStackSize := len(aStack) / 2
-		for i := 0; i < aStackSize; i++ {
+	if len(aStack) <= 6 {
+		for i := 0; i < stackSize/2; i++ {
 			PushTop(&aStack, &bStack, "b")
 		}
 
@@ -64,6 +70,26 @@ func main() {
 		MergeSmallStacks(&aStack, &bStack, max, min)
 		return
 	}
+
+	if len(aStack) > 6 {
+		var index int = 0
+		for {
+			if aStack[index] != min && aStack[index] != max {
+				PushTop(&aStack, &bStack, "b")
+
+				if bStack[0] > median && len(bStack) != 1 {
+					Rotate(&bStack, "b")
+				}
+			} else {
+				Rotate(&aStack, "a")
+			}
+
+			if len(aStack) == 2 {
+				break
+			}
+		}
+		FullSort(&aStack, &bStack)
+	}
 }
 
 func FindValues(Stack *[]int) (int, int, int, int) {
@@ -71,27 +97,159 @@ func FindValues(Stack *[]int) (int, int, int, int) {
 	sortedStack = append(sortedStack, *Stack...)
 	sort.Ints(sortedStack)
 
-	var min int
-	var max int
+	var min int = sortedStack[0]
+	var max int = sortedStack[len(sortedStack)-1]
 	var stackLenght int = len(*Stack)
 	var median int = (sortedStack)[stackLenght/2]
-	for i := 0; i < len(*Stack); i++ {
-		if i == 0 {
-			min = (*Stack)[i]
-			max = (*Stack)[i]
-			continue
+
+	return min, max, stackLenght, median
+}
+
+func FullSort(A_StackTable *[]int, B_StackTable *[]int) {
+	for {
+		if len(*B_StackTable) == 0 {
+			break
 		}
 
-		if min > (*Stack)[i] {
-			min = (*Stack)[i]
+		var scoreList []ScoreData = make([]ScoreData, len(*B_StackTable))
+
+		var steps int
+		var stackLenght int = len(scoreList)
+		var changeDirection bool
+		for i := 0; i < stackLenght; i++ {
+			scoreList[i].StepsCounterInB = steps
+
+			if stackLenght%2 == 0 {
+				if stackLenght/2 > i {
+					steps++
+				} else {
+					steps--
+				}
+			} else {
+				if i == (stackLenght/2)+1 {
+					scoreList[i].StepsCounterInB = steps - 1
+					steps--
+				}
+
+				if stackLenght/2 >= i {
+					steps++
+				} else {
+					steps--
+				}
+			}
+
+			if (i == (stackLenght/2)+1 && stackLenght%2 == 1) || (i == (stackLenght/2) && stackLenght%2 == 0) {
+				changeDirection = true
+			}
+
+			if !changeDirection {
+				scoreList[i].TypeMoveInStackB = "r"
+			} else {
+				scoreList[i].TypeMoveInStackB = "rr"
+			}
 		}
 
-		if max < (*Stack)[i] {
-			max = (*Stack)[i]
+		var reverseRotateResult, rotateResult, bestResult, bestResultIndex int
+		for i := 0; i < len(*B_StackTable); i++ {
+			rotateResult = CheckRotate(*A_StackTable, (*B_StackTable)[i], "r")
+			reverseRotateResult = CheckRotate(*A_StackTable, (*B_StackTable)[i], "rr")
+
+			if rotateResult <= reverseRotateResult {
+				scoreList[i].StepsCounterInA = rotateResult
+				scoreList[i].TypeMoveInStackA = "r"
+			} else {
+				scoreList[i].StepsCounterInA = reverseRotateResult
+				scoreList[i].TypeMoveInStackA = "rr"
+			}
+
+			if rotateResult == reverseRotateResult {
+				if (scoreList[i].TypeMoveInStackA != scoreList[i].TypeMoveInStackB) && scoreList[i].TypeMoveInStackB == "rr" {
+					scoreList[i].StepsCounterInA = reverseRotateResult
+					scoreList[i].TypeMoveInStackA = "rr"
+				}
+			}
+
+			possibleBestResult := scoreList[i].StepsCounterInA + scoreList[i].StepsCounterInB
+			if bestResult == 0 || (bestResult > possibleBestResult) {
+				bestResult = scoreList[i].StepsCounterInA + scoreList[i].StepsCounterInB
+				bestResultIndex = i
+			}
+		}
+
+		var stepsLeftInA, stepsLeftInB int = scoreList[bestResultIndex].StepsCounterInA, scoreList[bestResultIndex].StepsCounterInB
+		for {
+			if stepsLeftInA == 0 && stepsLeftInB == 0 {
+				PushTop(B_StackTable, A_StackTable, "a")
+				break
+			}
+
+			if scoreList[bestResultIndex].TypeMoveInStackA == scoreList[bestResultIndex].TypeMoveInStackB {
+				if stepsLeftInA != 0 && stepsLeftInB != 0 {
+					if scoreList[bestResultIndex].TypeMoveInStackA == "r" {
+						RotateBoth(A_StackTable, B_StackTable)
+					} else {
+						ReverseRotateBoth(A_StackTable, B_StackTable)
+					}
+					stepsLeftInA--
+					stepsLeftInB--
+					continue
+				}
+			}
+
+			if stepsLeftInA != 0 {
+				FullSortMove(scoreList[bestResultIndex].TypeMoveInStackA, A_StackTable, &stepsLeftInA, "a")
+			}
+
+			if stepsLeftInB != 0 {
+				FullSortMove(scoreList[bestResultIndex].TypeMoveInStackB, B_StackTable, &stepsLeftInB, "b")
+			}
 		}
 	}
 
-	return min, max, stackLenght, median
+	min, _, stackSize, _ := FindValues(A_StackTable)
+	var RotateType string
+	var stepsCount int
+	for i := 0; i < stackSize; i++ {
+		if (*A_StackTable)[i] == min {
+			if stackSize%2 == 0 {
+				if stackSize/2 <= i {
+					RotateType = "rr"
+					stepsCount = stackSize - i
+				} else {
+					RotateType = "r"
+					stepsCount = i
+				}
+			} else {
+				if stackSize/2 < i {
+					RotateType = "rr"
+					stepsCount = stackSize - i
+				} else {
+					RotateType = "r"
+					stepsCount = i
+				}
+			}
+			break
+		}
+	}
+
+	if RotateType == "r" {
+		for i := 0; i < stepsCount; i++ {
+			Rotate(A_StackTable, "a")
+		}
+	} else {
+		for i := 0; i < stepsCount; i++ {
+			ReverseRotate(A_StackTable, "a")
+		}
+	}
+}
+
+func FullSortMove(typeMove string, stack *[]int, stepsLeft *int, name string) {
+	if typeMove == "r" {
+		Rotate(stack, name)
+	} else {
+		ReverseRotate(stack, name)
+	}
+	*stepsLeft--
 }
 
 func SmallSortA_Stack(Stack *[]int) {
@@ -309,7 +467,10 @@ func Swap(stack *[]int, name string) {
 
 // Shifts up all elements of stack by 1 (ra, rb)
 func Rotate(stack *[]int, name string) {
-	fmt.Println("r" + name)
+	if name != "bb" {
+		fmt.Println("r" + name)
+	}
+
 	newStack := make([]int, len(*stack))
 
 	newStack[len(*stack)-1] = (*stack)[0]
@@ -323,7 +484,10 @@ func Rotate(stack *[]int, name string) {
 
 // Shifts down all elements of stack by 1 (rra, rrb)
 func ReverseRotate(stack *[]int, name string) {
-	fmt.Println("rr" + name)
+	if name != "bb" {
+		fmt.Println("rr" + name)
+	}
+
 	newStack := make([]int, len(*stack))
 
 	newStack[0] = (*stack)[len(*stack)-1]
@@ -341,19 +505,65 @@ func ReverseRotate(stack *[]int, name string) {
 // 	Swap(B_StackTable)
 // }
 
-// // Executes rotate function for both stacks (rr)
-// func RotateBoth(A_StackTable *[]int, B_StackTable *[]int) {
-// 	Rotate(A_StackTable)
-// 	Rotate(B_StackTable)
-// }
+// Executes rotate function for both stacks (rr)
+func RotateBoth(A_StackTable *[]int, B_StackTable *[]int) {
+	fmt.Println("rr")
+	Rotate(A_StackTable, "bb")
+	Rotate(B_StackTable, "bb")
+}
 
-// // Executes reverse rotate function for both stacks (rrr)
-// func ReverseRotateBoth(A_StackTable *[]int, B_StackTable *[]int) {
-// 	ReverseRotate(A_StackTable)
-// 	ReverseRotate(B_StackTable)
-// }
+// Executes reverse rotate function for both stacks (rrr)
+func ReverseRotateBoth(A_StackTable *[]int, B_StackTable *[]int) {
+	fmt.Println("rrr")
+	ReverseRotate(A_StackTable, "bb")
+	ReverseRotate(B_StackTable, "bb")
+}
 
-// Checks if stack A sortend and stack B is clear
-func CheckSort(sortedNumbers []int, A_StackTable *[]int, B_StackTable *[]int) bool {
-	return reflect.DeepEqual(sortedNumbers, *A_StackTable) && len(*B_StackTable) == 0
+func CheckRotate(stack []int, numberToAppend int, rotateType string) int {
+	var counter int
+
+	if len(stack) == 1 {
+		return 0
+	} else if stack[0] > numberToAppend && stack[len(stack)-1] < numberToAppend {
+		return 0
+	}
+
+	var copyStack []int = make([]int, len(stack))
+	copy(copyStack, stack)
+
+	if rotateType == "r" {
+		for {
+			tempVar := copyStack[len(copyStack)-1]
+			copyStack[len(copyStack)-1] = copyStack[0]
+
+			for i := 1; i < len(copyStack)-1; i++ {
+				copyStack[i-1] = copyStack[i]
+			}
+
+			copyStack[len(copyStack)-2] = tempVar
+			counter++
+
+			if copyStack[0] > numberToAppend && copyStack[len(copyStack)-1] < numberToAppend {
+				break
+			}
+		}
+	} else {
+		for {
+			tempVar := copyStack[0]
+			copyStack[0] = copyStack[len(copyStack)-1]
+
+			for i := len(copyStack) - 1; i > 1; i-- {
+				copyStack[i] = copyStack[i-1]
+			}
+
+			copyStack[1] = tempVar
+			counter++
+
+			if copyStack[0] > numberToAppend && copyStack[len(copyStack)-1] < numberToAppend {
+				break
+			}
+		}
+	}
+
+	return counter
 }

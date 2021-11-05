@@ -73,6 +73,10 @@ func GetInstructions(allInstructions []string, instructionsToUse *[]string) bool
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		for i, k := range allInstructions {
+			if scanner.Text() == "stop" {
+				return false
+			}
+
 			if scanner.Text() == "" {
 				continue
 			}
