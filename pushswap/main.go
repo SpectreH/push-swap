@@ -61,6 +61,10 @@ func main() {
 	min, max, stackSize, median := FindValues(&aStack)
 
 	if len(aStack) <= 6 {
+		if aStack[0] > aStack[1] && aStack[1] == min {
+			Swap(&aStack, "a")
+		}
+
 		for i := 0; i < stackSize/2; i++ {
 			PushTop(&aStack, &bStack, "b")
 		}
